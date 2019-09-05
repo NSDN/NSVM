@@ -5,6 +5,9 @@
 static NSVM_FUNC nsvmFuncList[NSVM_FUNC_MAX] = { 0 };
 static uint32_t nsvmProgCnt = 0;
 
+#define NSVM_JMP_DUMMY  0xFFFFFFFF
+static uint32_t nsvmJumAddr = NSVM_JMP_DUMMY;
+
 static NSVM_ERR_INFO nsvmErrInfo = { 0 };
 
 NSVM_ERR_INFO* nsvm_err_info() {
@@ -23,7 +26,7 @@ nsvm_ret nsvm_put(nsvm_opi index, nsvm_ret (*func)(NSVM_OP* op)) {
 #endif
 
 void nsvm_jmp(nsvm_addr addr) {
-    nsvmProgCnt = addr;
+    nsvmJumAddr = addr;
 }
 
 nsvm_ret nsvm_exe(NSVM_OP* op) {
@@ -58,6 +61,59 @@ uint8_t __nsvm_get_op_len(uint8_t* code) {
 #endif
 }
 
+#define ___NSVM_GET_U32(addr) ((uint32_t) (*(addr) | (*(addr + 1) << 8) | (*(addr + 2) << 16) | (*(addr + 3) << 24)))
+#define ___NSVM_GET_U16(addr) ((uint16_t) (*(addr) | (*(addr + 1) << 8)))
+
+void __nsvm_parse_op(uint8_t* code, uint8_t length, NSVM_OP* op) {
+    memset(op, 0, sizeof(NSVM_OP));
+
+    #ifdef NSVM_VARLEN_OP
+        if (length >= NSVM_OP_NARG) {
+            op->op_index = *code;
+        #ifdef NSVM_LONGLEN_OP
+            if (length >= NSVM_OP_DST) {
+                op->dst_type = *(code + 1);
+                op->dst= ___NSVM_GET_U32(code + 2);
+                if (length >= NSVM_OP_DST_SRC) {
+                    op->src_type = *(code + 6);
+                    op->src= ___NSVM_GET_U32(code + 7);
+                    if (length == NSVM_OP_DST_SRC_EXT) {
+                        op->ext_type = *(code + 11);
+                        op->ext= ___NSVM_GET_U32(code + 12);
+                    }
+                }
+            }
+        #else
+            if (length >= NSVM_OP_DST) {
+                op->dst_type = *(code + 1);
+                op->dst= ___NSVM_GET_U16(code + 2);
+                if (length == NSVM_OP_DST_SRC) {
+                    op->src_type = *(code + 4);
+                    op->src= ___NSVM_GET_U16(code + 5);
+                }
+            }
+        #endif
+        }
+    #else
+        if (length == sizeof(NSVM_OP)) {
+        #ifdef NSVM_LONGLEN_OP
+            op->dst_type = *(code + 1);
+            op->dst= *(code + 2) | (*(code + 3) << 8) | (*(code + 4) << 16) | (*(code + 5) << 24);
+            op->src_type = *(code + 6);
+            op->src= *(code + 7) | (*(code + 8) << 8) | (*(code + 9) << 16) | (*(code + 10) << 24);
+            op->ext_type = *(code + 11);
+            op->ext= *(code + 12) | (*(code + 13) << 8) | (*(code + 14) << 16) | (*(code + 15) << 24);
+        #else
+            op->dst_type = *(code + 1);
+            op->dst= *(code + 2) | (*(code + 3) << 8);
+            op->src_type = *(code + 4);
+            op->src= *(code + 5) | (*(code + 6) << 8);
+            op->reversed = 0xFF;
+        #endif
+        }
+    #endif
+}
+
 nsvm_ret nsvm_run(uint8_t* code, nsvm_addr length) {
     uint8_t op_length = 0; uint8_t* offset = code;
     NSVM_OP op_body = { 0 };
@@ -75,8 +131,7 @@ nsvm_ret nsvm_run(uint8_t* code, nsvm_addr length) {
             return NSVM_RET_ERR;
         }
 
-        memset(&op_body, 0, sizeof(NSVM_OP));
-        memcpy(&op_body, offset, op_length);  // may cause bug
+        __nsvm_parse_op(offset, op_length, &op_body);
 
         result = nsvm_exe(&op_body);
 
@@ -93,12 +148,22 @@ nsvm_ret nsvm_run(uint8_t* code, nsvm_addr length) {
             return NSVM_RET_ERR;
         }
 
-        if (result == NSVM_RET_END)
-            return NSVM_RET_OK;
-        else if (result == NSVM_RET_RST)
-            nsvmProgCnt = 0;
-        else {
-            nsvmProgCnt += op_length;
+        if (nsvmJumAddr != NSVM_JMP_DUMMY) {
+            if (nsvmJumAddr >= length) {
+                strcpy(nsvmErrInfo.msg, "Invaild Jump");
+                nsvmErrInfo.addr = nsvmProgCnt;
+                memcpy(&(nsvmErrInfo.op), &op_body, sizeof(NSVM_OP));
+                return NSVM_RET_ERR;
+            }
+            nsvmProgCnt = nsvmJumAddr;
+            nsvmJumAddr = NSVM_JMP_DUMMY;
+        } else {
+            if (result == NSVM_RET_END)
+                break;
+            else if (result == NSVM_RET_RST)
+                nsvmProgCnt = 0;
+            else
+                nsvmProgCnt += op_length;
         }
     }
 

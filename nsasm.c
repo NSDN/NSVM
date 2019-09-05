@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-uint32_t regs[0xFF] = { 0 };
+uint32_t regs[0xF] = { 0 };
 
 nsvm_ret nsasm_nop(NSVM_OP* op) {
     return NSVM_RET_OK;
@@ -38,9 +38,6 @@ nsvm_ret nsasm_mov(NSVM_OP* op) {
     else
         src = &(op->src);
     *dst = *src;
-    
-    printf("%x, %x; %x, %x; %x, %x\n", op->dst_type, op->dst, op->src_type, op->src, *dst, *src);
-
     return NSVM_RET_OK;
 }
 
@@ -70,7 +67,7 @@ nsvm_ret nsasm_prt(NSVM_OP* op) {
         dst = &(regs[op->dst & 0xFF]);
     else
         dst = &(op->dst);
-    printf("Test print: 0x%x\n", *dst);
+    printf("PRT: 0x%x\n", *dst);
     return NSVM_RET_OK;
 }
 
