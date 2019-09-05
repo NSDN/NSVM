@@ -15,8 +15,8 @@
 
 /* 使用超过 256 种指令的情况下, 需开启长指令支持, 并关闭变长指令支持 */
 /* 比如: 编号为 0x100 ~ 0x1FF 的指令省略目标操作数的时候会引发错误 */
-//#define NSVM_VARLEN_OP
-//#define NSVM_LONGLEN_OP
+#define NSVM_VARLEN_OP
+#define NSVM_LONGLEN_OP
 
 #define nsvm_ret        uint8_t
 #define NSVM_RET_END    0xFF
