@@ -39,22 +39,31 @@ rst     复位
 ```cpp
 VM 基本上与 NSASM 解释器核心类似, 但是执行阶段为字节码解释执行
 取指令及取数据期望能达到 O(1) 的级别
+有预处理开关以确定指令是变长还是定长
 
-以下为指令结构
+以下为长指令结构
 struct op {
     uint8_t     op_index;       // 1 byte, 指令编号低 8 位
     uint8_t     dst_type;       // 1 byte, 低 7 位为目标操作数类型
              // dst_type & 0x80    1 bit, 指令编号第 9 位, 目前作为保留位
+    uint32_t    dst;            // 4 bytes, 立即数或虚拟地址
     uint8_t     src_type;       // 1 byte, 低 7 位为源操作数类型
              // src_type & 0x80    1 bit, 指令编号第 10 位, 目前作为保留位
+    uint32_t    src;            // 4 bytes, 立即数或虚拟地址
     uint8_t     ext_type;       // 1 byte, 低 7 位为附加操作数类型
              // ext_type & 0x80    1 bit, 指令编号第 11 位, 目前作为保留位
-    uint32_t    dst;            // 4 bytes, 立即数或虚拟地址
-    uint32_t    src;            // 4 bytes, 立即数或虚拟地址
     uint32_t    ext;            // 4 bytes, 立即数或虚拟地址
 }                               // 16 bytes
 
-程序标号被编译后, 所在行被空指令代替, 以便计算偏移地址
+以下为短指令结构
+struct op {
+    uint8_t     op_index;       // 1 byte, 指令编号
+    uint8_t     dst_type;       // 1 byte, 目标操作数类型
+    uint16_t    dst;            // 2 bytes, 立即数或虚拟地址
+    uint8_t     src_type;       // 1 byte, 源操作数类型
+    uint16_t    src;            // 2 bytes, 立即数或虚拟地址
+    uint8_t     reversed;       // 1 byte, 保留
+}                               // 8 bytes
 ```
 
 ### 其他信息
