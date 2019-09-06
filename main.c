@@ -32,7 +32,6 @@ void main(int argc, char* argv[]) {
     fread(code, 1, size, fp);
     fclose(fp);
 
-    printf("Sample code running...\n");
     nsvm_ret result = nsvm_run(code, size);
     printf("\n");
 
@@ -47,7 +46,9 @@ void main(int argc, char* argv[]) {
         printf("    op: 0x%x\n", info->op.op_index);
         printf("    dst type: 0x%x, dst: 0x%x\n", info->op.type_dst, info->op.dst);
         printf("    src type: 0x%x, src: 0x%x\n", info->op.type_src, info->op.src);
+    #ifdef NSVM_LONGLEN_OP
         printf("    ext type: 0x%x, ext: 0x%x\n", info->op.type_ext, info->op.ext);
+    #endif
         printf("\n");
     }
 }
