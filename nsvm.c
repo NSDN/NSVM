@@ -6,7 +6,7 @@ static NSVM_FUNC nsvmFuncList[NSVM_FUNC_MAX] = { 0 };
 static uint32_t nsvmProgCnt = 0;
 
 #define NSVM_JMP_DUMMY  0xFFFFFFFF
-static uint32_t nsvmJumAddr = NSVM_JMP_DUMMY;
+static uint32_t nsvmJmpAddr = NSVM_JMP_DUMMY;
 
 static NSVM_ERR_INFO nsvmErrInfo = { 0 };
 
@@ -26,7 +26,7 @@ nsvm_ret nsvm_put(nsvm_opi index, nsvm_ret (*func)(NSVM_OP* op)) {
 #endif
 
 void nsvm_jmp(nsvm_addr addr) {
-    nsvmJumAddr = addr;
+    nsvmJmpAddr = addr;
 }
 
 nsvm_ret nsvm_exe(NSVM_OP* op) {
@@ -149,15 +149,15 @@ nsvm_ret nsvm_run(uint8_t* code, nsvm_addr length) {
             return NSVM_RET_ERR;
         }
 
-        if (nsvmJumAddr != NSVM_JMP_DUMMY) {
-            if (nsvmJumAddr >= length) {
+        if (nsvmJmpAddr != NSVM_JMP_DUMMY) {
+            if (nsvmJmpAddr >= length) {
                 strcpy(nsvmErrInfo.msg, "Invaild Jump");
                 nsvmErrInfo.addr = nsvmProgCnt;
                 memcpy(&(nsvmErrInfo.op), &op_body, sizeof(NSVM_OP));
                 return NSVM_RET_ERR;
             }
-            nsvmProgCnt = nsvmJumAddr;
-            nsvmJumAddr = NSVM_JMP_DUMMY;
+            nsvmProgCnt = nsvmJmpAddr;
+            nsvmJmpAddr = NSVM_JMP_DUMMY;
         } else {
             if (result == NSVM_RET_END)
                 break;
