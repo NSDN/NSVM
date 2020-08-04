@@ -34,11 +34,11 @@ nsvm_ret nsvm_exe(NSVM_OP* op) {
     return nsvmFuncList[op->op_index].func(op);
 #elif defined(NSVM_LONGLEN_OP)
     #if NSVM_FUNC_MAX == 0x1FF
-        return nsvmFuncList[op->op_index | ((op->type_dst & 0x80) << 1)].func(op);
+        return nsvmFuncList[op->op_index | ((op->type_dst_expr & 0x80) << 1)].func(op);
     #elif NSVM_FUNC_MAX == 0x3FF
-        return nsvmFuncList[op->op_index | ((op->type_dst & 0x80) << 1) | ((op->type_src & 0x80) << 2)].func(op);
+        return nsvmFuncList[op->op_index | ((op->type_dst_expr & 0x80) << 1) | ((op->type_src & 0x80) << 2)].func(op);
     #elif NSVM_FUNC_MAX == 0x7FF
-        return nsvmFuncList[op->op_index | ((op->type_dst & 0x80) << 1) | ((op->type_src & 0x80) << 2) | ((op->type_ext & 0x80) << 3)].func(op);
+        return nsvmFuncList[op->op_index | ((op->type_dst_expr & 0x80) << 1) | ((op->type_src & 0x80) << 2) | ((op->type_ext & 0x80) << 3)].func(op);
     #endif
 #endif
 }
@@ -71,25 +71,29 @@ void __nsvm_parse_op(uint8_t* code, uint8_t length, NSVM_OP* op) {
         if (length >= NSVM_OP_NARG) {
             op->op_index = *code;
         #ifdef NSVM_LONGLEN_OP
-            if (length >= NSVM_OP_DST) {
-                op->type_dst = *(code + 1);
-                op->dst= ___NSVM_GET_U32(code + 2);
-                if (length >= NSVM_OP_DST_SRC) {
-                    op->type_src = *(code + 6);
-                    op->src= ___NSVM_GET_U32(code + 7);
-                    if (length == NSVM_OP_DST_SRC_EXT) {
-                        op->type_ext = *(code + 11);
-                        op->ext= ___NSVM_GET_U32(code + 12);
+            if (length >= NSVM_OP_DST8) {
+                op->type_dst_expr = *(code + 1);
+                if (length >= NSVM_OP_DST) {
+                    op->dst= ___NSVM_GET_U32(code + 2);
+                    if (length >= NSVM_OP_DST_SRC) {
+                        op->type_src = *(code + 6);
+                        op->src= ___NSVM_GET_U32(code + 7);
+                        if (length == NSVM_OP_DST_SRC_EXT) {
+                            op->type_ext = *(code + 11);
+                            op->ext= ___NSVM_GET_U32(code + 12);
+                        }
                     }
                 }
             }
         #else
-            if (length >= NSVM_OP_DST) {
-                op->type_dst = *(code + 1);
-                op->dst= ___NSVM_GET_U16(code + 2);
-                if (length == NSVM_OP_DST_SRC) {
-                    op->type_src = *(code + 4);
-                    op->src= ___NSVM_GET_U16(code + 5);
+            if (length >= NSVM_OP_DST8) {
+                op->type_dst_expr = *(code + 1);
+                if (length >= NSVM_OP_DST) {
+                    op->dst= ___NSVM_GET_U16(code + 2);
+                    if (length == NSVM_OP_DST_SRC) {
+                        op->type_src = *(code + 4);
+                        op->src= ___NSVM_GET_U16(code + 5);
+                    }
                 }
             }
         #endif
@@ -98,14 +102,14 @@ void __nsvm_parse_op(uint8_t* code, uint8_t length, NSVM_OP* op) {
         if (length == sizeof(NSVM_OP)) {
             op->op_index = *code;
         #ifdef NSVM_LONGLEN_OP
-            op->type_dst = *(code + 1);
+            op->type_dst_expr = *(code + 1);
             op->dst= *(code + 2) | (*(code + 3) << 8) | (*(code + 4) << 16) | (*(code + 5) << 24);
             op->type_src = *(code + 6);
             op->src= *(code + 7) | (*(code + 8) << 8) | (*(code + 9) << 16) | (*(code + 10) << 24);
             op->type_ext = *(code + 11);
             op->ext= *(code + 12) | (*(code + 13) << 8) | (*(code + 14) << 16) | (*(code + 15) << 24);
         #else
-            op->type_dst = *(code + 1);
+            op->type_dst_expr = *(code + 1);
             op->dst= *(code + 2) | (*(code + 3) << 8);
             op->type_src = *(code + 4);
             op->src= *(code + 5) | (*(code + 6) << 8);

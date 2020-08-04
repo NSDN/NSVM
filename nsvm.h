@@ -34,9 +34,12 @@
 /* ---------------- 以下内容不应修改 ---------------- */
 /* ------------------------------------------------- */
 
+// 目标操作数类型便捷访问宏定义
+#define type_dst type_dst_expr
+
 typedef struct {
     uint8_t     op_index;       // 1 byte, 指令编号低 8 位
-    uint8_t     type_dst;       // 1 byte, 低 7 位为目标操作数类型
+    uint8_t     type_dst_expr;  // 1 byte, 低 7 位为目标操作数类型, 或者为双字节指令的操作数
              // type_dst & 0x80    1 bit, 指令编号第 9 位, 目前作为保留位
     uint32_t    dst;            // 4 bytes, 立即数或虚拟地址
     uint8_t     type_src;       // 1 byte, 低 7 位为源操作数类型
@@ -49,7 +52,7 @@ typedef struct {
 
 typedef struct {
     uint8_t     op_index;       // 1 byte, 指令编号
-    uint8_t     type_dst;       // 1 byte, 目标操作数类型
+    uint8_t     type_dst_expr;  // 1 byte, 目标操作数类型, 或者为双字节指令的操作数
     uint16_t    dst;            // 2 bytes, 立即数或虚拟地址
     uint8_t     type_src;       // 1 byte, 源操作数类型
     uint16_t    src;            // 2 bytes, 立即数或虚拟地址
@@ -58,6 +61,7 @@ typedef struct {
 
 #ifdef NSVM_VARLEN_OP
     #define NSVM_OP_NARG                1
+    #define NSVM_OP_DST8                2
     #ifdef NSVM_LONGLEN_OP
         #define NSVM_OP_DST             6
         #define NSVM_OP_DST_SRC         11
